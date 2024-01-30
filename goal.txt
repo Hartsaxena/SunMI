@@ -1,0 +1,26 @@
+/* 
+    What I want the language to look like afterwards.
+    This is also what I want comments to look like, by the way.
+*/
+
+Person = class {
+
+    public string name;
+    public int age;
+
+    construct init(name, age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    private int birthday() {
+        this.age++;
+        print("Happy birthday!");
+        return this.age;
+    }
+
+    public void print() {
+        print(f"Name: {this.name}");
+        print(f"Age: {this.age}");
+    }
+}
