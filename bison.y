@@ -1,9 +1,9 @@
-/* C Declarations */
+/* C++ Declarations */
+/* Currently Porting everything to C++ */
 
 %{
-	#include <stdio.h>
+    #include <stdio.h>
 	int sym[33]; // Variable storage
-    void (*functionArray[256])(); // Function Storage
 	int t1 = 0;
 	int t0 = 0;
 	int t2 = 0;
@@ -11,6 +11,14 @@
 	int t4 = 0;
 	int cnt = 0;
 %}
+
+
+%union {
+    int num;
+    char var;
+    int expr;
+    int func;
+}
 
 /* bison declarations */
 
@@ -23,6 +31,11 @@
 %left '+' '-'
 %left '*' '/'
 
+// Type of tokens
+%type <num> NUM
+%type <var> VAR
+%type <expr> expression
+
 /* Grammar rules and actions follow.  */
 
 %%
@@ -31,9 +44,8 @@ program: /* NULL */
 | program statement {;}
 
 functionDef: FUNCTION '(' VAR ')' compoundStatement {;}
-functionCall: FUNCTION '(' VAR ')'
+functionCall: VAR '(' expression ')'
 | FUNCTION '('')'{
-
 }
 
 compoundStatement: '{' statementList '}'
@@ -42,7 +54,7 @@ statementList: statementList statement {;}
 
 
 statement:  SWITCH '(' VAR ')' '{' BASE '}'     
-| expression ';' {printf("value of expression: %d\n", $1);}
+| expression ';' {std::cout<<"value of expression: %d\n", $1);}
 | declaration
 | whileLoop
 | ifStatement ;
@@ -52,7 +64,7 @@ declaration:
 VAR '=' expression ';' { 
                         sym[$1] = $3;
                         t4 = sym[$1];
-                        printf("Value of the variable: %d\t\n",$3);
+                        std::cout<<"Value of the variable: %d\t\n",$3;
                     }
 | VAR '=' functionCall ';' {
 
@@ -61,31 +73,31 @@ VAR '=' expression ';' {
 /* While loops */
 whileLoop:
 WHILE '(' expression ')' statementList ';' {
-                            printf("\n----- Loop Started Here ---- \n");
+                            std::cout<<"\n----- Loop Started Here ---- \n";
                             while($3--) {
-                                printf("Loop Here :  %d\n", $3);
+                                std::cout<<format("Loop Here :  %d\n", $3);
                             }
-                            printf("----- Loop Ended Here -----\n\n");				
+                            std::cout<<"----- Loop Ended Here -----\n\n";			
                         }
 
 /* IF statements */
 ifStatement:
 IF '(' expression ')' statementList ';' %prec IFX {
                             if($3) {
-                                printf("\nValue of expression in IF: %d\n",$5);
+                                std::cout<<"IF statement condition passed\n";
                             } else {
-                                printf("Condition value zero in IF block\n");
+                                std::cout<<"Condition value zero in IF block\n";
                             }
                         }
 
 | IF '(' expression ')' expression ';' ELSE expression ';' {
                                 if($3)
                                 {
-                                    printf("Value of expression in IF: %d\n",$5);
+                                    std::cout<<format("Value of expression in IF: %d\n",$5);
                                 }
                                 else
                                 {
-                                    printf("Value of expression in ELSE: %d\n",$8);
+                                    std::cout<<format("Value of expression in ELSE: %d\n",$8);
                                 }
                             }
 
@@ -103,13 +115,13 @@ Base   : /*NULL*/
 Case    : CASE NUM ':' expression ';' BREAK ';' {
             if(t4==$2) {
                 cnt=1;
-                printf("\nSwitch Case statement Started Here \nID : %d  Returned %d.\nSwitch case ended\n\n",$2,$4);
+                std::cout<<format("\nSwitch Case statement Started Here \nID : %d  Returned %d.\nSwitch case ended\n\n",$2,$4);
             }
         };
 
 Default    : DEFAULT ':' expression ';' BREAK ';'{
             if(cnt==0){
-                printf("\nSwitch Case statement Started Here\nYou Failed !!!\nSwitch case ended\n\n");
+                std::cout<<"\nSwitch Case statement Started Here\nYou Failed !!!\nSwitch case ended\n\n";
             }
         }
      ;     
@@ -129,7 +141,7 @@ expression: NUM { $$ = $1; 	}
                         $$ = $1 / $3;
                     } else {
                         $$ = 0;
-                        printf("\nERROR: Division by 0\t");
+                        std::cout<<"\nERROR: Division by 0\t";
                     }
                 }
 
@@ -146,6 +158,5 @@ int yywrap() {
 }
 
 int yyerror(char *s){
-	printf( "%s\n", s);
+	std::cout<< "%s\n", s);
 }
-

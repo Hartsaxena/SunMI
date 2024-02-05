@@ -1,6 +1,6 @@
 BISON_FILE = bison.y
 FLEX_FILE = flex.l
-CC = gcc
+CC = g++
 
 all:
 	bison -d $(BISON_FILE)

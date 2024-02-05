@@ -64,14 +64,30 @@ extern int yydebug;
     BREAK = 265,                   /* BREAK  */
     PRINT = 266,                   /* PRINT  */
     DEFAULT = 267,                 /* DEFAULT  */
-    IFX = 268                      /* IFX  */
+    FUNCTION = 268,                /* FUNCTION  */
+    RETURN = 269,                  /* RETURN  */
+    STDOUT = 270,                  /* STDOUT  */
+    STDIN = 271,                   /* STDIN  */
+    IFX = 272                      /* IFX  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 16 "bison.y"
+
+    int num;
+    char var;
+    int expr;
+    int func;
+
+#line 88 "bison.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

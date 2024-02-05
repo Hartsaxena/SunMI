@@ -1,4 +1,4 @@
-/* C Declarations */
+/* C++ Declarations */
 
 %{
 	#include <stdio.h>
