@@ -1,54 +1,46 @@
-/* C++ Declarations */
-
 %{
-	#include <stdio.h>
-    #include "bison.tab.h"
-	#include <stdlib.h>
-	extern int yylval;
+#include <string>
+#include "node.h"
+#include "bison.hpp"
+
+#define SAVE_TOKEN  yylval.string = new std::string(yytext, yyleng)
+#define TOKEN(t)    (yylval.token = t)
 %}
 
-/* RE and Actions */
+%option noyywrap
 
 %%
 
-[0-9]+ { 
-    yylval = atoi(yytext);
-    return NUM;
-}
+[ \t\n]					        ;
+"extern"                        return TOKEN(TEXTERN);
+"return"				        return TOKEN(TRETURN);
+"if"                            return TOKEN(TIF);
+"else"                          return TOKEN(TELSE);
+[a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
+[0-9]+\.[0-9]* 			    SAVE_TOKEN; return TDOUBLE;
+[0-9]+					        SAVE_TOKEN; return TINTEGER;
 
-[a-z] {
-    yylval = *yytext - 'a';
-    return	VAR;
-}
+"="						          return TOKEN(TEQUAL);
+"=="				          	return TOKEN(TCEQ);
+"!="			          		return TOKEN(TCNE);
+"<"				          		return TOKEN(TCLT);
+"<="	          				return TOKEN(TCLE);
+">"				          		return TOKEN(TCGT);
+">="					          return TOKEN(TCGE);
 
-"loop"    return WHILE;
-"if"	  return IF;
-"else"  return ELSE;
-"case"    return CASE;
-"switch"  return SWITCH;
-"break"   return BREAK;
-"print"   return PRINT;
-"default" return DEFAULT;
-"function" return FUNCTION;
-"return" return RETURN;
-"stdout" return STDOUT;
-"stdin" return STDIN;
+"("	          					return TOKEN(TLPAREN);
+")"					          	return TOKEN(TRPAREN);
+"{"         						return TOKEN(TLBRACE);
+"}"					          	return TOKEN(TRBRACE);
 
-[-+/*<>=,():;{}] {
-    yylval = yytext[0];
-    return *yytext;
-}
+"."         						return TOKEN(TDOT);
+","				          		return TOKEN(TCOMMA);
 
-[ \t\n]*	;
+"+"				          		return TOKEN(TPLUS);
+"-"		          				return TOKEN(TMINUS);
+"*"		          				return TOKEN(TMUL);
+"/"				          		return TOKEN(TDIV);
 
-. {
-    yyerror("Unknown Character.\n");
-}
+.                       printf("Unknown token!\n"); yyterminate();
+
 %%
-
-int main() {
-	yyin = freopen("in.txt","r",stdin);
-	yyout = freopen("output.txt","w",stdout);
-	yyparse();
-}
-

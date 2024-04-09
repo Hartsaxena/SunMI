@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_YY_BISON_TAB_H_INCLUDED
-# define YY_YY_BISON_TAB_H_INCLUDED
+#ifndef YY_YY_BISON_HPP_INCLUDED
+# define YY_YY_BISON_HPP_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -54,21 +54,30 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    NUM = 258,                     /* NUM  */
-    VAR = 259,                     /* VAR  */
-    IF = 260,                      /* IF  */
-    ELSE = 261,                    /* ELSE  */
-    WHILE = 262,                   /* WHILE  */
-    CASE = 263,                    /* CASE  */
-    SWITCH = 264,                  /* SWITCH  */
-    BREAK = 265,                   /* BREAK  */
-    PRINT = 266,                   /* PRINT  */
-    DEFAULT = 267,                 /* DEFAULT  */
-    FUNCTION = 268,                /* FUNCTION  */
-    RETURN = 269,                  /* RETURN  */
-    STDOUT = 270,                  /* STDOUT  */
-    STDIN = 271,                   /* STDIN  */
-    IFX = 272                      /* IFX  */
+    TIDENTIFIER = 258,             /* TIDENTIFIER  */
+    TINTEGER = 259,                /* TINTEGER  */
+    TDOUBLE = 260,                 /* TDOUBLE  */
+    TCEQ = 261,                    /* TCEQ  */
+    TCNE = 262,                    /* TCNE  */
+    TCLT = 263,                    /* TCLT  */
+    TCLE = 264,                    /* TCLE  */
+    TCGT = 265,                    /* TCGT  */
+    TCGE = 266,                    /* TCGE  */
+    TEQUAL = 267,                  /* TEQUAL  */
+    TLPAREN = 268,                 /* TLPAREN  */
+    TRPAREN = 269,                 /* TRPAREN  */
+    TLBRACE = 270,                 /* TLBRACE  */
+    TRBRACE = 271,                 /* TRBRACE  */
+    TCOMMA = 272,                  /* TCOMMA  */
+    TDOT = 273,                    /* TDOT  */
+    TPLUS = 274,                   /* TPLUS  */
+    TMINUS = 275,                  /* TMINUS  */
+    TMUL = 276,                    /* TMUL  */
+    TDIV = 277,                    /* TDIV  */
+    TRETURN = 278,                 /* TRETURN  */
+    TEXTERN = 279,                 /* TEXTERN  */
+    TIF = 280,                     /* TIF  */
+    TELSE = 281                    /* TELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -77,14 +86,20 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 16 "bison.y"
+#line 12 "bison.y"
 
-    int num;
-    char var;
-    int expr;
-    int func;
+	Node *node;
+	NBlock *block;
+	NExpression *expr;
+	NStatement *stmt;
+	NIdentifier *ident;
+	NVariableDeclaration *var_decl;
+	std::vector<NVariableDeclaration*> *varvec;
+	std::vector<NExpression*> *exprvec;
+	std::string *string;
+	int token;
 
-#line 88 "bison.tab.h"
+#line 103 "bison.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -99,4 +114,4 @@ extern YYSTYPE yylval;
 int yyparse (void);
 
 
-#endif /* !YY_YY_BISON_TAB_H_INCLUDED  */
+#endif /* !YY_YY_BISON_HPP_INCLUDED  */

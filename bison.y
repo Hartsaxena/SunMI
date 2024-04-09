@@ -1,162 +1,124 @@
-/* C++ Declarations */
-/* Currently Porting everything to C++ */
-
 %{
-    #include <stdio.h>
-	int sym[33]; // Variable storage
-	int t1 = 0;
-	int t0 = 0;
-	int t2 = 0;
-	int t3 = 0;
-	int t4 = 0;
-	int cnt = 0;
+	#include "node.h"
+        #include <cstdio>
+        #include <cstdlib>
+	NBlock *programBlock; /* the top level root node of our final AST */
+
+	extern int yylex();
+	void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 %}
 
-
+/* Represents the many different ways we can access our data */
 %union {
-    int num;
-    char var;
-    int expr;
-    int func;
+	Node *node;
+	NBlock *block;
+	NExpression *expr;
+	NStatement *stmt;
+	NIdentifier *ident;
+	NVariableDeclaration *var_decl;
+	std::vector<NVariableDeclaration*> *varvec;
+	std::vector<NExpression*> *exprvec;
+	std::string *string;
+	int token;
 }
 
-/* bison declarations */
+/* Define our terminal symbols (tokens). This should
+   match our tokens.l lex file. We also define the node type
+   they represent.
+ */
+%token <string> TIDENTIFIER TINTEGER TDOUBLE
+%token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
+%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
+%token <token> TPLUS TMINUS TMUL TDIV
+%token <token> TRETURN TEXTERN
+%token <token> TIF TELSE
 
-%token NUM VAR IF ELSE WHILE CASE SWITCH BREAK PRINT DEFAULT
-%token FUNCTION RETURN
-%token STDOUT STDIN
-%nonassoc IFX
-%nonassoc ELSE
-%left '<' '>'
-%left '+' '-'
-%left '*' '/'
+/* Define the type of node our nonterminal symbols represent.
+   The types refer to the %union declaration above. Ex: when
+   we call an ident (defined by union type ident) we are really
+   calling an (NIdentifier*). It makes the compiler happy.
+ */
+%type <ident> ident
+%type <expr> numeric expr 
+%type <varvec> func_decl_args
+%type <exprvec> call_args
+%type <block> program stmts block
+%type <stmt> stmt var_decl func_decl extern_decl if_stmt
+%type <token> comparison
 
-// Type of tokens
-%type <num> NUM
-%type <var> VAR
-%type <expr> expression
+/* Operator precedence for mathematical operators */
+%left TPLUS TMINUS
+%left TMUL TDIV
 
-/* Grammar rules and actions follow.  */
+%start program
 
 %%
 
-program: /* NULL */
-| program statement {;}
+program : stmts { programBlock = $1; }
+		;
+		
+stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
+	  | stmts stmt { $1->statements.push_back($<stmt>2); }
+	  ;
 
-functionDef: FUNCTION '(' VAR ')' compoundStatement {;}
-functionCall: VAR '(' expression ')'
-| FUNCTION '('')'{
-}
-
-compoundStatement: '{' statementList '}'
-
-statementList: statementList statement {;}
-
-
-statement:  SWITCH '(' VAR ')' '{' BASE '}'     
-| expression ';' {std::cout<<"value of expression: %d\n", $1);}
-| declaration
-| whileLoop
-| ifStatement ;
-
-/* Declaration of variable */
-declaration:
-VAR '=' expression ';' { 
-                        sym[$1] = $3;
-                        t4 = sym[$1];
-                        std::cout<<"Value of the variable: %d\t\n",$3;
-                    }
-| VAR '=' functionCall ';' {
-
-                    }
-
-/* While loops */
-whileLoop:
-WHILE '(' expression ')' statementList ';' {
-                            std::cout<<"\n----- Loop Started Here ---- \n";
-                            while($3--) {
-                                std::cout<<format("Loop Here :  %d\n", $3);
-                            }
-                            std::cout<<"----- Loop Ended Here -----\n\n";			
-                        }
-
-/* IF statements */
-ifStatement:
-IF '(' expression ')' statementList ';' %prec IFX {
-                            if($3) {
-                                std::cout<<"IF statement condition passed\n";
-                            } else {
-                                std::cout<<"Condition value zero in IF block\n";
-                            }
-                        }
-
-| IF '(' expression ')' expression ';' ELSE expression ';' {
-                                if($3)
-                                {
-                                    std::cout<<format("Value of expression in IF: %d\n",$5);
-                                }
-                                else
-                                {
-                                    std::cout<<format("Value of expression in ELSE: %d\n",$8);
-                                }
-                            }
-
-|IF '(' expression ')' '{' statement '}' {;}
-
-
-BASE : Base
-     | Base Default
+stmt : var_decl | func_decl | extern_decl | if_stmt
+	 | expr { $$ = new NExpressionStatement(*$1); }
+	 | TRETURN expr { $$ = new NReturnStatement(*$2); }
      ;
 
-Base   : /*NULL*/
-     | Base Case
-     ;
+block : TLBRACE stmts TRBRACE { $$ = $2; }
+	  | TLBRACE TRBRACE { $$ = new NBlock(); }
+	  ;
 
-Case    : CASE NUM ':' expression ';' BREAK ';' {
-            if(t4==$2) {
-                cnt=1;
-                std::cout<<format("\nSwitch Case statement Started Here \nID : %d  Returned %d.\nSwitch case ended\n\n",$2,$4);
-            }
-        };
+var_decl : ident ident { $$ = new NVariableDeclaration(*$1, *$2); }
+		 | ident ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
+		 ;
 
-Default    : DEFAULT ':' expression ';' BREAK ';'{
-            if(cnt==0){
-                std::cout<<"\nSwitch Case statement Started Here\nYou Failed !!!\nSwitch case ended\n\n";
-            }
+extern_decl : TEXTERN ident ident TLPAREN func_decl_args TRPAREN
+                { $$ = new NExternDeclaration(*$2, *$3, *$5); delete $5; }
+            ;
+
+func_decl : ident ident TLPAREN func_decl_args TRPAREN block 
+			{ $$ = new NFunctionDeclaration(*$1, *$2, *$4, *$6); delete $4; }
+		  ;
+	
+func_decl_args : /*blank*/  { $$ = new VariableList(); }
+		  | var_decl { $$ = new VariableList(); $$->push_back($<var_decl>1); }
+		  | func_decl_args TCOMMA var_decl { $1->push_back($<var_decl>3); }
+		  ;
+
+if_stmt : TIF TLPAREN expr TRPAREN block { $$ = new NIfStatement(*$3, *$5); }
+        | TIF TLPAREN expr TRPAREN block TELSE block
+        {
+            NBlock elseBlock = *$7;
+            $$ = new NIfStatement(*$3, *$5, &elseBlock);
         }
-     ;     
+        ;
 
+ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
+	  ;
 
-expression: NUM { $$ = $1; 	}
-| VAR  { $$ = sym[$1]; }
+numeric : TINTEGER { $$ = new NInteger(atol($1->c_str())); delete $1; }
+		| TDOUBLE { $$ = new NDouble(atof($1->c_str())); delete $1; }
+		;
+	
+expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
+	 | ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; }
+	 | ident { $<ident>$ = $1; }
+	 | numeric
+         | expr TMUL expr   { $$ = new NBinaryOperator(*$1, $2, *$3); }
+         | expr TDIV expr   { $$ = new NBinaryOperator(*$1, $2, *$3); }
+         | expr TPLUS expr  { $$ = new NBinaryOperator(*$1, $2, *$3); }
+         | expr TMINUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+ 	 | expr comparison expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+     | TLPAREN expr TRPAREN { $$ = $2; }
+	 ;
+	
+call_args : /*blank*/  { $$ = new ExpressionList(); }
+		  | expr { $$ = new ExpressionList(); $$->push_back($1); }
+		  | call_args TCOMMA expr  { $1->push_back($3); }
+		  ;
 
-| expression '+' expression	{ $$ = $1 + $3; }
+comparison : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE;
 
-| expression '-' expression	{ $$ = $1 - $3; }
-
-| expression '*' expression	{ $$ = $1 * $3; }
-
-| expression '/' expression	{ 	
-                    if($3 != 0) {
-                        $$ = $1 / $3;
-                    } else {
-                        $$ = 0;
-                        std::cout<<"\nERROR: Division by 0\t";
-                    }
-                }
-
-| expression '<' expression	{ $$ = $1 < $3; }
-
-| expression '>' expression	{ $$ = $1 > $3; }
-
-| '(' expression ')'		{ $$ = $2;	}
-;
 %%
-
-int yywrap() {
-    return 1;
-}
-
-int yyerror(char *s){
-	std::cout<< "%s\n", s);
-}

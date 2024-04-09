@@ -1,0 +1,6 @@
+
+int thing = 1;
+
+if (thing == 1) {
+    echo("thing is 1");
+}
