@@ -7,10 +7,9 @@ OBJS = bison.o  \
        corefn.o  \
 	   native.o  \
 
-LLVMCONFIG = llvm-config
-CPPFLAGS = `$(LLVMCONFIG) --cppflags` -std=c++14
-LDFLAGS = `$(LLVMCONFIG) --ldflags` -lpthread -ldl -lncurses -rdynamic
-LIBS = `$(LLVMCONFIG) --libs`
+CPPFLAGS = $(shell llvm-config --cxxflags) -std=c++14
+LDFLAGS = $(shell llvm-config --ldflags --system-libs --libs)
+LIBS = `llvm-config --libs`
 CC = g++
 
 clean:
@@ -26,7 +25,6 @@ flex.cpp: flex.l bison.hpp
 
 %.o: %.cpp
 	$(CC) -c $(CPPFLAGS) -o $@ $<
-
 
 parser: $(OBJS)
 	$(CC)  -o $@ $(OBJS) $(LIBS) $(LDFLAGS)

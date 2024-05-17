@@ -26,7 +26,8 @@
    match our tokens.l lex file. We also define the node type
    they represent.
  */
-%token <string> TIDENTIFIER TINTEGER TDOUBLE
+%token <string> TCLASS TIDENTIFIER TINTEGER TDOUBLE TSTRING
+%token TTRUE TFALSE
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -39,11 +40,11 @@
    calling an (NIdentifier*). It makes the compiler happy.
  */
 %type <ident> ident
-%type <expr> numeric expr 
-%type <varvec> func_decl_args
+%type <expr> numeric expr
+%type <varvec> func_decl_args class_decl_args
 %type <exprvec> call_args
 %type <block> program stmts block
-%type <stmt> stmt var_decl func_decl extern_decl if_stmt
+%type <stmt> stmt var_decl func_decl extern_decl if_stmt class_decl
 %type <token> comparison
 
 /* Operator precedence for mathematical operators */
@@ -61,7 +62,7 @@ stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
 	  | stmts stmt { $1->statements.push_back($<stmt>2); }
 	  ;
 
-stmt : var_decl | func_decl | extern_decl | if_stmt
+stmt : var_decl | func_decl | extern_decl | class_decl | if_stmt
 	 | expr { $$ = new NExpressionStatement(*$1); }
 	 | TRETURN expr { $$ = new NReturnStatement(*$2); }
      ;
@@ -87,6 +88,16 @@ func_decl_args : /*blank*/  { $$ = new VariableList(); }
 		  | func_decl_args TCOMMA var_decl { $1->push_back($<var_decl>3); }
 		  ;
 
+class_decl : TCLASS ident TLBRACE class_decl_args TRBRACE
+            {
+                $$ = new NClassDeclaration(*$2, *$4);
+            };
+
+class_decl_args : /*blank*/  { $$ = new VariableList(); }
+          | var_decl { $$ = new VariableList(); $$->push_back($<var_decl>1); }
+          | class_decl_args TCOMMA var_decl { $1->push_back($<var_decl>3); }
+          ;
+
 if_stmt : TIF TLPAREN expr TRPAREN block { $$ = new NIfStatement(*$3, *$5); }
         | TIF TLPAREN expr TRPAREN block TELSE block
         {
@@ -110,6 +121,8 @@ expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
          | expr TDIV expr   { $$ = new NBinaryOperator(*$1, $2, *$3); }
          | expr TPLUS expr  { $$ = new NBinaryOperator(*$1, $2, *$3); }
          | expr TMINUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+     | TSTRING { $$ = new NString(*$1); delete $1;}
+     | TTRUE { $$ = new NBoolean(true); } | TFALSE { $$ = new NBoolean(false); }
  	 | expr comparison expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
      | TLPAREN expr TRPAREN { $$ = $2; }
 	 ;

@@ -54,30 +54,34 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    TIDENTIFIER = 258,             /* TIDENTIFIER  */
-    TINTEGER = 259,                /* TINTEGER  */
-    TDOUBLE = 260,                 /* TDOUBLE  */
-    TCEQ = 261,                    /* TCEQ  */
-    TCNE = 262,                    /* TCNE  */
-    TCLT = 263,                    /* TCLT  */
-    TCLE = 264,                    /* TCLE  */
-    TCGT = 265,                    /* TCGT  */
-    TCGE = 266,                    /* TCGE  */
-    TEQUAL = 267,                  /* TEQUAL  */
-    TLPAREN = 268,                 /* TLPAREN  */
-    TRPAREN = 269,                 /* TRPAREN  */
-    TLBRACE = 270,                 /* TLBRACE  */
-    TRBRACE = 271,                 /* TRBRACE  */
-    TCOMMA = 272,                  /* TCOMMA  */
-    TDOT = 273,                    /* TDOT  */
-    TPLUS = 274,                   /* TPLUS  */
-    TMINUS = 275,                  /* TMINUS  */
-    TMUL = 276,                    /* TMUL  */
-    TDIV = 277,                    /* TDIV  */
-    TRETURN = 278,                 /* TRETURN  */
-    TEXTERN = 279,                 /* TEXTERN  */
-    TIF = 280,                     /* TIF  */
-    TELSE = 281                    /* TELSE  */
+    TCLASS = 258,                  /* TCLASS  */
+    TIDENTIFIER = 259,             /* TIDENTIFIER  */
+    TINTEGER = 260,                /* TINTEGER  */
+    TDOUBLE = 261,                 /* TDOUBLE  */
+    TSTRING = 262,                 /* TSTRING  */
+    TTRUE = 263,                   /* TTRUE  */
+    TFALSE = 264,                  /* TFALSE  */
+    TCEQ = 265,                    /* TCEQ  */
+    TCNE = 266,                    /* TCNE  */
+    TCLT = 267,                    /* TCLT  */
+    TCLE = 268,                    /* TCLE  */
+    TCGT = 269,                    /* TCGT  */
+    TCGE = 270,                    /* TCGE  */
+    TEQUAL = 271,                  /* TEQUAL  */
+    TLPAREN = 272,                 /* TLPAREN  */
+    TRPAREN = 273,                 /* TRPAREN  */
+    TLBRACE = 274,                 /* TLBRACE  */
+    TRBRACE = 275,                 /* TRBRACE  */
+    TCOMMA = 276,                  /* TCOMMA  */
+    TDOT = 277,                    /* TDOT  */
+    TPLUS = 278,                   /* TPLUS  */
+    TMINUS = 279,                  /* TMINUS  */
+    TMUL = 280,                    /* TMUL  */
+    TDIV = 281,                    /* TDIV  */
+    TRETURN = 282,                 /* TRETURN  */
+    TEXTERN = 283,                 /* TEXTERN  */
+    TIF = 284,                     /* TIF  */
+    TELSE = 285                    /* TELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -99,7 +103,7 @@ union YYSTYPE
 	std::string *string;
 	int token;
 
-#line 103 "bison.hpp"
+#line 107 "bison.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -1,6 +1,7 @@
 #include "node.h"
 #include "codegen.h"
 #include "bison.hpp"
+#include <llvm/IR/Value.h>
 
 using namespace std;
 
@@ -17,13 +18,11 @@ void CodeGenContext::generateCode(NBlock& root)
 	
 	/* Push a new variable/block context */
 	pushBlock(bblock);
-	root.codeGen(*this); /* emit bytecode for the toplevel block */
+	root.codeGen(*this); // Remove bytecode from top block because it is not needed
 	ReturnInst::Create(MyContext, bblock);
 	popBlock();
 	
-	/* Print the bytecode in a human-readable format 
-	   to see if our program compiled properly
-	 */
+    // Echo the generated code
 	std::cout << "Code is generated.\n";
 	// module->dump();
 
@@ -58,6 +57,12 @@ static Type *typeOf(const NIdentifier& type)
 
 /* -- Code Generation -- */
 
+Value* NBoolean::codeGen(CodeGenContext& context)
+{
+    std::cout << "Creating boolean: " << value << endl;
+    return ConstantInt::get(Type::getInt1Ty(MyContext), value, true);
+}
+
 Value* NInteger::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating integer: " << value << endl;
@@ -70,6 +75,12 @@ Value* NDouble::codeGen(CodeGenContext& context)
 	return ConstantFP::get(Type::getDoubleTy(MyContext), value);
 }
 
+Value* NString::codeGen(CodeGenContext& context)
+{
+    std::cout << "Creating string: " << value << endl;
+    return Builder.CreateGlobalStringPtr(value);
+}
+
 Value* NIdentifier::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating identifier reference: " << name << endl;
@@ -80,43 +91,6 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 
 	// return nullptr;  
 	return new LoadInst(context.locals()[name]->getType(),context.locals()[name], name, false, context.currentBlock());
-}
-
-Value* NIfStatement::codegen() {
-    llvm::Value* condValue = condition.codeGen();
-
-    llvm::Function* function = builder.GetInsertBlock()->getParent();
-
-    llvm::BasicBlock* trueBB = llvm::BasicBlock::Create(context, "trueBlock", function);
-    llvm::BasicBlock* falseBB = nullptr;
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "mergeBlock", function);
-
-    if (falseBlock) {
-        falseBB = llvm::BasicBlock::Create(context, "falseBlock", function);
-        builder.CreateCondBr(condValue, trueBB, falseBB);
-    } else {
-        builder.CreateCondBr(condValue, trueBB, mergeBB);
-    }
-
-    builder.SetInsertPoint(trueBB);
-
-    llvm::CodeGenContext trueBlock(context, trueBB);
-    trueBlock.codeGen();
-    builder.CreateBr(mergeBB);
-    trueBB = builder.GetInsertBlock(); // Update true block in case it was split due to phi nodes
-
-    if (falseBlock) {
-        function->getBasicBlockList().push_back(falseBB);
-        builder.SetInsertPoint(falseBB);
-        falseBlock->codeGen();
-        builder.CreateBr(mergeBB);
-        falseBB = builder.GetInsertBlock(); // Update false block in case it was split due to phi nodes
-    }
-
-    function->getBasicBlockList().push_back(mergeBB);
-    builder.SetInsertPoint(mergeBB);
-
-    return nullptr; // This is just an example, you might want to return something meaningful
 }
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
@@ -145,8 +119,12 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 		case TMINUS: 	instr = Instruction::Sub; goto math;
 		case TMUL: 		instr = Instruction::Mul; goto math;
 		case TDIV: 		instr = Instruction::SDiv; goto math;
-				
+
 		/* TODO comparison */
+        // case TCEQ:      instr = Instruction::FCmp; goto math;
+        // case TCNE:      instr = Instruction::FCmp; goto math;
+        // case TCLT:      instr = Instruction::FCmp; goto math;
+        // case TCLE:      instr = Instruction::FCmp; goto math;
 	}
 	return NULL;
 math:
@@ -204,21 +182,69 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 
 Value* NIfStatement::codeGen(CodeGenContext& context)
 {
-    /*
-    May help: https://iq.opengenus.org/llvm-control-flow-if-then-else/
-    */
-    std::cout << "Creating if statement" << type.name << " " << id.name << endl;
-    Value* condValue = this->condition;
-    if (!condValue) return nullptr;
-
-    if (!condValue->getType()->isIntegerTy(1)) {
-        std::cerr << "If condition must be a boolean" << std::endl;
+    // std::cout << "Creating if statement" << this->type.name << " " << id.name << endl;
+    NExpression* condExpr = &this->condition;
+    Value* condValue = condExpr->codeGen(context);
+    if (!condValue) {
         return nullptr;
     }
 
-    Function* function = context.currentBlock()->getParent();
-    BasicBlock* thenBlock = BasicBlock::Create(MyContext, "then", function);
+    // Convert condition to a boolean by comparing non-equal to 0.0
+    condValue = Builder.CreateFCmpONE(
+        condValue, ConstantFP::get(MyContext, APFloat(0.0f)), "ifcond");
+
+    Function *function = Builder.GetInsertBlock()->getParent();
+
+    // Create blocks for the then and else cases.  Insert the 'then' block at the
+    // end of the function.
+    BasicBlock *thenBB = BasicBlock::Create(MyContext, "then", function);
+    BasicBlock *elseBB = BasicBlock::Create(MyContext, "else");
+    BasicBlock *mergeBB = BasicBlock::Create(MyContext, "ifcont");
+
+    Builder.CreateCondBr(condValue, thenBB, elseBB);
+
+    // Emit then value.
+    Builder.SetInsertPoint(thenBB);
+
+    Value *thenVal = this->trueBlock.codeGen(context);
+    if (!thenVal) {
+        return nullptr;
+    }
+
+    Builder.CreateBr(mergeBB);
+    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+    thenBB = Builder.GetInsertBlock();
+
+    // Emit else block.
+    function->getBasicBlockList().push_back(elseBB);
+    Builder.SetInsertPoint(elseBB);
+
+    Value *elseVal;
+    if (this->falseBlock) {
+        elseVal = this->falseBlock->codeGen(context);
+        if (!elseVal) {
+            return nullptr;
+        }
+    } else {
+        // If no else block, return 0.
+        elseVal = ConstantInt::get(Type::getInt32Ty(MyContext), 0);
+    }
+
+    Builder.CreateBr(mergeBB);
+    // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
+    elseBB = Builder.GetInsertBlock();
+
+    // Emit merge block.
+    function->getBasicBlockList().push_back(mergeBB);
+    Builder.SetInsertPoint(mergeBB);
+    PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(MyContext), 2, "iftmp");
+
+    PN->addIncoming(thenVal, thenBB);
+    PN->addIncoming(elseVal, elseBB);
+
+    return PN;
 }
+
 
 Value* NExternDeclaration::codeGen(CodeGenContext& context)
 {
@@ -262,4 +288,10 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	context.popBlock();
 	std::cout << "Creating function: " << id.name << endl;
 	return function;
+}
+
+Value* NClassDeclaration::codeGen(CodeGenContext& context)
+{
+    std::cout << "Creating class: " << id.name << endl;
+    return nullptr;
 }

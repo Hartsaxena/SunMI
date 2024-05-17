@@ -24,6 +24,7 @@ using namespace llvm;
 class NBlock;
 
 static LLVMContext MyContext;
+static IRBuilder<> Builder(MyContext);
 
 class CodeGenBlock
 {
@@ -35,7 +36,7 @@ public:
 
 class CodeGenContext
 {
-    std::stack<CodeGenBlock *> blocks;
+    std::stack<CodeGenBlock*> blocks;
     Function *mainFunction;
 
 public:

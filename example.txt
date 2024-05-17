@@ -1,6 +1,7 @@
 
-int thing = 1;
+int thing = 1
 
 if (thing == 1) {
-    echo("thing is 1");
+    echo("thing is 1")
+    echo(12)
 }

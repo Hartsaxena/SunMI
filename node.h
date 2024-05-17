@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <vector>
 #include <llvm/IR/Value.h>
@@ -6,6 +8,7 @@ class CodeGenContext;
 class NStatement;
 class NExpression;
 class NVariableDeclaration;
+class NClassDeclaration;
 class NIfStatement;
 class NBlock;
 
@@ -32,6 +35,13 @@ public:
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
+class NBoolean : public NExpression {
+public:
+    bool value;
+    NBoolean(bool value) : value(value) { }
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
 class NInteger : public NExpression {
 public:
 	long long value;
@@ -44,6 +54,13 @@ public:
 	double value;
 	NDouble(double value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NString : public NExpression {
+public:
+    std::string value;
+    NString(const std::string& value) : value(value) { }
+    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NIdentifier : public NExpression {
@@ -84,15 +101,15 @@ public:
 
 class NIfStatement : public NStatement {
 public:
-    const NExpression& condition;
+    NExpression& condition;
     NBlock& trueBlock;
-    NBlock& falseBlock;
+    NBlock* falseBlock; // Change the type from NBlock& to NBlock*
     NIfStatement(NExpression& condition, NBlock& trueBlock)
-        : condition(condition), trueBlock(trueBlock), {}
-    NIfStatement(NExpression& condition, NBlock& trueBlock, NBlock& falseBlock)
-        : condition(condition), trueBlock(trueBlock), falseBlock(&falseBlock) {}
+        : condition(condition), trueBlock(trueBlock), falseBlock(nullptr) {} // Remove the extra comma here
+    NIfStatement(NExpression& condition, NBlock& trueBlock, NBlock* falseBlock)
+        : condition(condition), trueBlock(trueBlock), falseBlock(falseBlock) {}
 
-    virtual llvm::Value* codegen(CodeGenContext& context);
+    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NExpressionStatement : public NStatement {
@@ -144,4 +161,13 @@ public:
 			const VariableList& arguments, NBlock& block) :
 		type(type), id(id), arguments(arguments), block(block) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NClassDeclaration: public NStatement {
+public:
+    const NIdentifier& id;
+    const VariableList& members;
+    NClassDeclaration(const NIdentifier& id, const VariableList& members) :
+        id(id), members(members) {}
+    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
